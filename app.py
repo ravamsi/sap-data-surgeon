@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from collections import defaultdict
-from validator import validate_file, SAP_EC_SCHEMA
+from validator import validate_file, SAP_EC_SCHEMA, normalise_columns, COLUMN_MAPPING
 from ai_explainer import explain_error
 from pdf_report import generate_pdf_report
 
@@ -371,7 +371,6 @@ except Exception as e:
     st.stop()
 
 # Normalise columns immediately after load so all checks use SAP names
-from validator import normalise_columns, COLUMN_MAPPING, SAP_EC_SCHEMA
 df, col_changes = normalise_columns(df)
 
 required_fields = [f for f, r in SAP_EC_SCHEMA.items() if r["required"]]
