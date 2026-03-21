@@ -133,6 +133,32 @@ if st.button("▶  Run Full Audit", type="primary", use_container_width=True):
     col2.metric("Issues auto-corrected", len(auto_fixed))
     col3.metric("Rows processed", len(df))
 
+# ── Readiness Score ──
+    total_checks = len(df) * len([f for f in SAP_EC_SCHEMA if f in df.columns])
+    if total_checks > 0:
+        score = max(0, round(((total_checks - len(real_errors)) / total_checks) * 100))
+    else:
+        score = 0
+
+    if score >= 90:
+        score_color = "🟢"
+        score_label = "Excellent — nearly ready for import"
+    elif score >= 70:
+        score_color = "🟡"
+        score_label = "Good — a few issues to fix"
+    elif score >= 50:
+        score_color = "🟠"
+        score_label = "Fair — several issues need attention"
+    else:
+        score_color = "🔴"
+        score_label = "Poor — significant cleanup required"
+
+    st.divider()
+    st.subheader(f"{score_color} SAP Readiness Score: {score}%")
+    st.progress(score / 100)
+    st.caption(score_label)
+    st.divider()
+
     if not real_errors and not auto_fixed:
         st.success("✅ No errors found. Your file appears ready for SAP import.")
     else:
