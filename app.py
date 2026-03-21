@@ -3,6 +3,7 @@ import pandas as pd
 from io import BytesIO
 from validator import validate_file, SAP_EC_SCHEMA
 from ai_explainer import explain_error
+from pdf_report import generate_pdf_report
 
 st.set_page_config(
     page_title="SAP EC Data Surgeon",
@@ -193,6 +194,23 @@ if st.button("▶  Run Full Audit", type="primary", use_container_width=True):
             pd.DataFrame(auto_fixed).to_excel(writer, sheet_name="Auto-Fixed Items", index=False)
         corrected_df.to_excel(writer, sheet_name="Corrected Data", index=False)
     output.seek(0)
+
+    # PDF download
+    pdf_buffer = generate_pdf_report(
+        filename=uploaded.name,
+        total_rows=len(df),
+        score=score,
+        score_label=score_label,
+        real_errors=real_errors,
+        auto_fixed=auto_fixed
+    )
+    st.download_button(
+        label="📄 Download PDF Summary Report",
+        data=pdf_buffer,
+        file_name=f"sap_ec_audit_{uploaded.name.split('.')[0]}.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
 
     st.download_button(
         label="📥 Download Full Audit Report (.xlsx)",
