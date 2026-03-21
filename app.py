@@ -38,6 +38,35 @@ uploaded = st.file_uploader(
 
 if uploaded is None:
     st.info("Upload a file above to begin the audit.")
+
+    template_data = {
+        "userId": ["EMP001", "EMP002"],
+        "firstName": ["Marco", "Sofia"],
+        "lastName": ["Rossi", "Bianchi"],
+        "hireDate": ["2024-01-15", "2024-03-01"],
+        "startDate": ["2024-01-15", "2024-03-01"],
+        "country": ["ITA", "DEU"],
+        "company": ["Acme SpA", "Acme SpA"],
+        "businessUnit": ["IT", "HR"],
+        "department": ["Engineering", "Human Resources"],
+        "division": ["Tech", "People"],
+        "jobCode": ["DEV01", "HR01"],
+        "payGroup": ["PG-ITA", "PG-DEU"],
+        "email": ["marco.rossi@company.com", "sofia.bianchi@company.com"],
+        "gender": ["M", "F"],
+        "employmentType": ["Employee", "Employee"],
+        "contractType": ["Permanent", "Fixed-Term"],
+        "payFrequency": ["Monthly", "Monthly"],
+        "managerId": ["EMP000", "EMP000"],
+        "costCenter": ["CC-001", "CC-002"],
+    }
+
+    template_df = pd.DataFrame(template_data)
+    template_output = BytesIO()
+    with pd.ExcelWriter(template_output, engine="openpyxl") as writer:
+        template_df.to_excel(writer, sheet_name="Employee Data", index=False)
+    template_output.seek(0)
+
     with st.expander("Expected column names"):
         required = [f for f, r in SAP_EC_SCHEMA.items() if r["required"]]
         optional = [f for f, r in SAP_EC_SCHEMA.items() if not r["required"]]
@@ -50,6 +79,14 @@ if uploaded is None:
             st.markdown("**Optional**")
             for f in optional:
                 st.markdown(f"- `{f}`")
+
+    st.download_button(
+        label="📥 Download SAP EC Template (.xlsx)",
+        data=template_output,
+        file_name="sap_ec_employee_template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        help="Download this template, fill it with your employee data, then upload it above"
+    )
     st.stop()
 
 # ── Load file ──
