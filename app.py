@@ -370,6 +370,10 @@ except Exception as e:
     st.error(f"Could not read file: {e}")
     st.stop()
 
+# Normalise columns immediately after load so all checks use SAP names
+from validator import normalise_columns, COLUMN_MAPPING, SAP_EC_SCHEMA
+df, col_changes = normalise_columns(df)
+
 required_fields = [f for f, r in SAP_EC_SCHEMA.items() if r["required"]]
 found = [f for f in required_fields if f in df.columns]
 missing_cols = [f for f in required_fields if f not in df.columns]
@@ -386,6 +390,10 @@ st.markdown(f"""
 
 if missing_cols:
     st.warning(f"Missing required columns: {', '.join(missing_cols)}")
+
+if col_changes:
+    rename_str = ", ".join([f"'{k}' → '{v}'" for k, v in col_changes.items()])
+    st.info(f"Columns auto-renamed to SAP EC format: {rename_str}")
 
 # ── Step 2 ──
 st.markdown(stepper_html(2), unsafe_allow_html=True)
