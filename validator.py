@@ -657,7 +657,9 @@ def validate_file(df, custom_picklists=None, foundation_objects=None):
                             f"is configured for {country} in your SAP system."
                         ),
                     })
-
+    # Step 6 — Effective dating validation
+    effective_errors = validate_effective_dating(df)
+    errors.extend(effective_errors)
     return errors, corrected
 def load_custom_picklists(picklist_file):
     """
@@ -728,3 +730,78 @@ def load_foundation_objects(foundation_file):
         return foundation
     except Exception as e:
         return {}
+    
+def validate_effective_dating(df):
+    """
+    Check for effective dating conflicts within the uploaded file.
+    Flags employees with duplicate records on the same effective date,
+    and records where hireDate creates a potential history conflict.
+    """
+    errors = []
+
+    if "userId" not in df.columns or "startDate" not in df.columns:
+        return errors
+
+    # Check for same userId + same startDate (duplicate effective records)
+    if df.duplicated(subset=["userId", "startDate"], keep=False).any():
+        dupes = df[df.duplicated(subset=["userId", "startDate"], keep=False)]
+        for _, group in dupes.groupby(["userId", "startDate"]):
+            rows = group.index.tolist()
+            uid = group["userId"].iloc[0]
+            date = group["startDate"].iloc[0]
+            errors.append({
+                "row": str([r + 2 for r in rows]),
+                "field": "userId / startDate",
+                "bad_value": f"userId: {uid}, startDate: {date}",
+                "error_type": "Effective Dating Conflict",
+                "description": (
+                    f"Employee '{uid}' has {len(rows)} records with the same "
+                    f"startDate ({date}). SAP EC only allows one active record "
+                    f"per effective date per employee. Remove or adjust the duplicate."
+                ),
+            })
+
+    # Check for records dated more than 10 years in the past
+    from datetime import datetime
+    today = datetime.today()
+    for idx, row in df.iterrows():
+        row_num = idx + 2
+        start = str(row.get("startDate", "")).strip()
+        if start and start != "nan":
+            result, _ = validate_date(start)
+            if result:
+                record_date = datetime.strptime(result, "%Y-%m-%d")
+                years_ago = (today - record_date).days / 365
+                if years_ago > 10:
+                    errors.append({
+                        "row": row_num,
+                        "field": "startDate",
+                        "bad_value": start,
+                        "error_type": "Effective Dating Warning",
+                        "description": (
+                            f"startDate '{start}' is over 10 years in the past. "
+                            f"Verify this is intentional — backdated records can "
+                            f"cause history conflicts in SAP EC."
+                        ),
+                    })
+
+        # Check for future dates beyond 2 years
+        hire = str(row.get("hireDate", "")).strip()
+        if hire and hire != "nan":
+            result, _ = validate_date(hire)
+            if result:
+                record_date = datetime.strptime(result, "%Y-%m-%d")
+                days_ahead = (record_date - today).days
+                if days_ahead > 730:
+                    errors.append({
+                        "row": row_num,
+                        "field": "hireDate",
+                        "bad_value": hire,
+                        "error_type": "Effective Dating Warning",
+                        "description": (
+                            f"hireDate '{hire}' is more than 2 years in the future. "
+                            f"Verify this is not a data entry error."
+                        ),
+                    })
+
+    return errors
