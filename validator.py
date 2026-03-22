@@ -35,7 +35,12 @@ SAP_EC_SCHEMA = {
     ]},
     "managerId":      {"required": False, "type": "string",   "max_len": 100},
     "costCenter":     {"required": False, "type": "string",   "max_len": 64},
-}
+    "defaultLocale":  {"required": False, "type": "picklist", "values": [
+        "en_US", "en_GB", "de_DE", "fr_FR", "it_IT", "es_ES",
+        "nl_NL", "pt_BR", "pt_PT", "ja_JP", "zh_CN", "ko_KR",
+    ]},
+    "timeZone":       {"required": False, "type": "string",   "max_len": 64},
+    }
 
 # ── Column name variations → SAP EC standard ──
 COLUMN_MAPPING = {
