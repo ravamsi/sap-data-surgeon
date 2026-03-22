@@ -218,6 +218,8 @@ div[data-testid="stExpander"] {
     background: #ffffff !important; border: 1px solid #e2e8f0 !important;
     border-radius: 10px !important;
 }
+[data-testid="stDataFrame"] iframe { background: white !important; }
+.stDataFrame { background: white !important; border-radius: 10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -602,7 +604,7 @@ else:
             })
 
     comp_df = pd.DataFrame(completeness_data)
-    comp_df = comp_df.sort_values("Completeness", ascending=True)
+    comp_df = comp_df.sort_values("Completeness", ascending=True).reset_index(drop=True)
 
     st.dataframe(
         comp_df,
