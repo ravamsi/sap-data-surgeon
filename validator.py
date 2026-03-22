@@ -386,7 +386,7 @@ def normalise_picklists(df):
     return df, corrections
 
 
-def validate_file(df):
+def validate_file(df, custom_picklists=None, foundation_objects=None):
     """
     Main validation function.
     Returns (list_of_errors, corrected_dataframe).
@@ -495,19 +495,44 @@ def validate_file(df):
                         ),
                     })
 
-            # Picklist validation
+            # Picklist validation — use custom if provided, fall back to defaults
             elif rules["type"] == "picklist":
-                if val not in rules["values"]:
+    # Determine which picklist to validate against
+                if custom_picklists and field in custom_picklists:
+                    valid_values = custom_picklists[field]
+                    source = "your instance picklist"
+                else:
+                    valid_values = rules["values"]
+                    source = "SAP EC standard"
+
+                if val not in valid_values:
                     errors.append({
                         "row": row_num,
                         "field": field,
                         "bad_value": val,
                         "error_type": "Invalid Picklist Value",
                         "description": (
-                            f"'{val}' is not accepted for '{field}'. "
-                            f"Valid values: {', '.join(rules['values'])}."
-                        ),
-                    })
+                            f"'{val}' is not in the valid values for '{field}' "
+                            f"({source}). "
+                            f"Valid options: {', '.join(valid_values[:10])}"
+                            f"{'...' if len(valid_values) > 10 else ''}."
+            ),
+        })
+
+# Foundation object validation
+            if foundation_objects and field in foundation_objects:
+                if val not in foundation_objects[field]:
+                    errors.append({
+                        "row": row_num,
+                        "field": field,
+                        "bad_value": val,
+                        "error_type": "Foundation Object Not Found",
+                        "description": (
+                            f"'{val}' does not exist as a valid {field} code "
+                            f"in your SAP instance. Check your foundation data "
+                            f"or create this object before importing."
+            ),
+        })
 
             # Max length
             if rules.get("max_len") and len(val) > rules["max_len"]:
@@ -634,3 +659,72 @@ def validate_file(df):
                     })
 
     return errors, corrected
+def load_custom_picklists(picklist_file):
+    """
+    Load client-specific picklist values from an uploaded CSV.
+    Expected format: columns = picklistId, code, label (standard SF export format)
+    Returns dict: {fieldName: [valid_codes]}
+    """
+    try:
+        df = pd.read_csv(picklist_file)
+        custom = {}
+
+        # Standard SF picklist export format
+        if "picklistId" in df.columns and "code" in df.columns:
+            for picklist_id, group in df.groupby("picklistId"):
+                codes = group["code"].dropna().astype(str).tolist()
+                # Map common SF picklist IDs to EC field names
+                field_map = {
+                    "ecGender":          "gender",
+                    "employment-type":   "employmentType",
+                    "contract-type":     "contractType",
+                    "pay-frequency":     "payFrequency",
+                    "country":           "country",
+                    "ecPayGroup":        "payGroup",
+                }
+                field = field_map.get(picklist_id, picklist_id)
+                custom[field] = codes
+
+        # Simple format: column name = field, values in rows
+        else:
+            for col in df.columns:
+                custom[col] = df[col].dropna().astype(str).tolist()
+
+        return custom
+    except Exception as e:
+        return {}
+
+
+def load_foundation_objects(foundation_file):
+    """
+    Load client foundation object codes from uploaded CSV.
+    Expected: one column per object type (company, department, jobCode, etc.)
+    Returns dict: {fieldName: [valid_codes]}
+    """
+    try:
+        df = pd.read_csv(foundation_file)
+        foundation = {}
+        
+        # Map common foundation object column names
+        fo_mapping = {
+            "company code":    "company",
+            "company":         "company",
+            "department code": "department",
+            "department":      "department",
+            "job code":        "jobCode",
+            "jobcode":         "jobCode",
+            "cost center":     "costCenter",
+            "costcenter":      "costCenter",
+            "pay group":       "payGroup",
+            "paygroup":        "payGroup",
+            "business unit":   "businessUnit",
+            "division":        "division",
+        }
+        
+        for col in df.columns:
+            mapped = fo_mapping.get(col.lower().strip(), col.lower().strip())
+            foundation[mapped] = df[col].dropna().astype(str).tolist()
+        
+        return foundation
+    except Exception as e:
+        return {}

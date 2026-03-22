@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from collections import defaultdict
-from validator import validate_file, SAP_EC_SCHEMA, normalise_columns, COLUMN_MAPPING
+from validator import validate_file, SAP_EC_SCHEMA, normalise_columns, COLUMN_MAPPING, load_custom_picklists, load_foundation_objects
 from ai_explainer import explain_error
 from pdf_report import generate_pdf_report
 
@@ -292,6 +292,28 @@ with st.sidebar:
         🗑️ &nbsp;No data stored or shared<br>
         ⚡ &nbsp;Results in under 2 minutes
     </div>""", unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:1rem 0'>",
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div style='font-size:10px;color:#94a3b8;text-transform:uppercase;
+    letter-spacing:0.1em;margin-bottom:8px'>Instance configuration</div>
+    <div style='font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5'>
+    Upload your SF picklist export and foundation data for instance-specific validation.
+    </div>
+    """, unsafe_allow_html=True)
+
+    picklist_file = st.file_uploader(
+        "Picklist export (optional)",
+        type=["csv"],
+        key="picklist",
+        help="Export from SF Admin → Picklist Center → Export"
+    )
+    foundation_file = st.file_uploader(
+        "Foundation objects (optional)",
+        type=["csv"],
+        key="foundation",
+        help="CSV with your company, department, jobCode, costCenter codes"
+    )
 
 # ── Hero ──
 st.markdown("""
@@ -401,7 +423,14 @@ if not run:
     st.stop()
 
 with st.spinner("Validating against SAP EC field schema..."):
-    errors, corrected_df = validate_file(df)
+    custom_picklists   = load_custom_picklists(picklist_file)    if picklist_file   else None
+    foundation_objects = load_foundation_objects(foundation_file) if foundation_file else None
+
+    errors, corrected_df = validate_file(
+        df,
+        custom_picklists=custom_picklists,
+        foundation_objects=foundation_objects
+    )
 
 auto_fixed  = [e for e in errors if "Auto-fixed" in e["error_type"]]
 real_errors = [e for e in errors if "Auto-fixed" not in e["error_type"]]
