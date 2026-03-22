@@ -322,8 +322,8 @@ st.markdown("""
 <div class="hero">
     <div class="hero-eyebrow">SAP SuccessFactors · Employee Central</div>
     <h1>Pre-Migration Data Audit</h1>
-    <p>Upload your employee data file. Every field is validated against SAP EC rules,
-    each error explained in plain English, and a corrected file returned — ready for import.</p>
+   <p>Upload your employee data file. Every field is validated against SAP EC rules,
+    errors explained with exact fixes, and a corrected file returned — ready for import.</p>
 </div>
 """, unsafe_allow_html=True)
 
