@@ -606,20 +606,69 @@ else:
     comp_df = pd.DataFrame(completeness_data)
     comp_df = comp_df.sort_values("Completeness", ascending=True).reset_index(drop=True)
 
-    st.dataframe(
-        comp_df,
-        use_container_width=True,
-        height=300,
-        column_config={
-            "Completeness": st.column_config.ProgressColumn(
-                "Completeness",
-                min_value=0,
-                max_value=100,
-                format="%d%%",
-            )
-        }
-    )
-st.markdown(stepper_html(4), unsafe_allow_html=True)
+    # Build completeness table as HTML
+    rows_html = ""
+    for _, row in comp_df.iterrows():
+        pct = row["Completeness"]
+        if pct == 100:
+            bar_color = "#16a34a"
+        elif pct >= 80:
+            bar_color = "#d97706"
+        else:
+            bar_color = "#dc2626"
+        req_badge = (
+            '<span style="background:#eff6ff;color:#2563eb;font-size:10px;'
+            'padding:2px 8px;border-radius:99px;font-weight:500">Yes</span>'
+            if row["Required"] == "Yes"
+            else
+            '<span style="background:#f1f5f9;color:#94a3b8;font-size:10px;'
+            'padding:2px 8px;border-radius:99px">No</span>'
+        )
+        bar = f"""
+        <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;background:#f1f5f9;border-radius:3px;height:6px">
+                <div style="width:{pct}%;background:{bar_color};
+                height:6px;border-radius:3px"></div>
+            </div>
+            <span style="font-size:11px;color:{bar_color};
+            font-weight:500;min-width:36px;text-align:right">{pct}%</span>
+        </div>"""
+        rows_html += f"""
+        <tr>
+            <td style="padding:8px 12px;font-family:DM Mono,monospace;
+            font-size:12px;color:#2563eb">{row['Field']}</td>
+            <td style="padding:8px 12px">{req_badge}</td>
+            <td style="padding:8px 12px;font-size:12px;
+            color:#64748b;font-family:DM Mono,monospace">{row['Filled']}</td>
+            <td style="padding:8px 12px;min-width:200px">{bar}</td>
+        </tr>"""
+
+    table_html = f"""
+    <div style="background:#ffffff;border:1px solid #e2e8f0;
+    border-radius:12px;overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+        <table style="width:100%;border-collapse:collapse">
+            <thead>
+                <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+                    <th style="padding:10px 12px;text-align:left;font-size:10px;
+                    color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:0.08em;font-weight:500">Field</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:10px;
+                    color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:0.08em;font-weight:500">Required</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:10px;
+                    color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:0.08em;font-weight:500">Filled</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:10px;
+                    color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:0.08em;font-weight:500">Completeness</th>
+                </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+    </div>"""
+
+    st.markdown(table_html, unsafe_allow_html=True)
 st.markdown('<div class="sec-label">Download results</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
