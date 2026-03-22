@@ -582,6 +582,41 @@ else:
             st.markdown(rows_html, unsafe_allow_html=True)
 
 # ── Step 4 ──
+# ── Field Completeness ──
+    st.markdown('<div class="sec-label">Field completeness</div>',
+                unsafe_allow_html=True)
+
+    completeness_data = []
+    for field in SAP_EC_SCHEMA:
+        if field in df.columns:
+            total = len(df)
+            filled = (df[field].astype(str).str.strip()
+                      .replace("nan", "").replace("", float("nan"))
+                      .notna().sum())
+            pct = round((filled / total) * 100) if total > 0 else 0
+            completeness_data.append({
+                "Field": field,
+                "Required": "Yes" if SAP_EC_SCHEMA[field]["required"] else "No",
+                "Filled": f"{int(filled)}/{total}",
+                "Completeness": pct,
+            })
+
+    comp_df = pd.DataFrame(completeness_data)
+    comp_df = comp_df.sort_values("Completeness", ascending=True)
+
+    st.dataframe(
+        comp_df,
+        use_container_width=True,
+        height=300,
+        column_config={
+            "Completeness": st.column_config.ProgressColumn(
+                "Completeness",
+                min_value=0,
+                max_value=100,
+                format="%d%%",
+            )
+        }
+    )
 st.markdown(stepper_html(4), unsafe_allow_html=True)
 st.markdown('<div class="sec-label">Download results</div>', unsafe_allow_html=True)
 
